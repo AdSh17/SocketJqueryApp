@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     <title>Test App for Online Users</title>
+     <style>
+         #userWrapper
+          {
+             float: left;
+             border:1px #ccc solid;
+             border-radius: 10px;
+             background: #f4f4f4;
+             padding: 10px;
+             margin-left:600px;
+             width:300px;
+             max-height:400px;
+          }
+        #mainWrapper{
+                display:none;
+            }
+      </style>
+    </head>
+
+    <body>
+        <div id="container">
+            <div id="namesWrapper">
+                <div id="error"></div>
+                <div id="selCir"></div>
+                <form id="usernameForm">
+                
+            <label for='color'> Select Your Color : </label><br/>
+            <svg height="100" width="1000">
+              <circle  cx="40" cy="40" r="30" stroke-width="3" fill="red" />
+              <circle  cx="110" cy="40" r="30" stroke-width="3" fill="green" />
+              <circle  cx="190" cy="40" r="30" stroke-width="3" fill="blue" />
+              <circle  cx="270" cy="40" r="30" stroke-width="3" fill="pink" />
+              <circle  cx="350" cy="40" r="30" stroke-width="3" fill="yellow" />
+              <circle  cx="430" cy="40" r="30" stroke-width="3" fill="purple" />
+              <circle  cx="510" cy="40" r="30" stroke-width="3" fill="grey" />
+              <circle  cx="590" cy="40" r="30" stroke-width="3" fill="black" />
+            </svg>
+            <br/>
+               <label for="name"> Input your name or Initials(8 chars max):</label> <br/>
+                <input type="text" required id="username"> <br/>
+                 <label for="button"> Click on button  to Enter Circle Field</label> <br/>
+                <input type="submit" value="Submit">
+                </form>
+            </div>
+
+            <div id="mainWrapper">
+                 <div id="mainWindow"></div>
+
+            <div id="userWrapper">
+                  <p> Online Users </p>
+                  <div id="users"></div>
+                  <div></div>
+            </div>
+        </div>
+      </div>
+<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+
+        function rgb2hex(orig){
+              var rgb = orig.replace(/\s/g,'')
+                         .match(/^rgba?\((\d+),(\d+),(\d+)/i);
+              
+            return (rgb && rgb.length === 4) ? "#" +
+                  ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) +
+                  ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) +
+                  ("0" + parseInt(rgb[3],10).toString(16)).slice(-2) : orig;
+            }
+
+            $(function()
+            {
+                var socket = io.connect();
+                var $usernameForm = $('#usernameForm');
+                var $username = $('#username');
+                var $error = $('#error');
+                var $main = $('#mainWindow');
+                var $mainWrapper = $("mainWrapper");
+                var $users = $('#users');
+                var $circleSel,$abc;
+
+      
+        $("circle").click(function()
+        {
+          circleSel = rgb2hex($(this).css("fill"));
+          $('#selCir').css({'background-color' :circleSel,
+               'border-radius': '40px', 
+               'padding': '30px', 
+               'width'  : '15px', 
+               'height' : '15px', 
+               'border' : '1px  solid black'});
+        });
+
+        $usernameForm.submit(function(e)
+           {
+              e.preventDefault();
+              var $user = {};
+              $user.user = $username.val();
+              $user.circleSel = circleSel;
+              socket.emit('new user', $user.user,  $user.circleSel,function(data){
+                          
+                    if(data){
+                       $('#namesWrapper').hide();
+                       $('#mainWrapper').show();
+                      
+                      socket.emit('add user',  $user.user ,
+                       '<svg height="100" width="100">' +
+                       '<circle cx="50" cy="50" r="40" '+
+                      ' stroke-width="3" fill="red" ' +
+                       '/></svg>');
+                  
+                        } 
+                    else
+                     {
+                        $error.html('Username is already taken');
+                     }
+                }); 
+                $username.val('');
+                circleSel ="";
+              });
+              
+              socket.on('users', function(data)
+                {  
+                  var html=""
+                    for(i = 0; i < data.length; i++){
+                       html += data[i].user +'<br/>';
+                       // $mainWrapper.html(html); 
+                     }
+                   $users.html(html);
+                 
+                })
+            socket.on('new message', function(data)
+                {   
+                  var color = rgb2hex(data.circle);
+                  
+                   $main.append('<strong>'+ '<svg id="cirdrag" height=200" width="200">' +
+                   '<circle  cx="50" cy="50" r="40" ' +
+                      ' stroke-width="3" fill=' + color + '/>' +
+                        '<text x="80" y="90" fill="black">' + data.user +
+                        '</text></svg>' + '</strong><br/>');
+                    
+                    $("#cirdrag").draggable();
+                    
+                 });
+            })
+        </script>
+    </body>
+</html>
